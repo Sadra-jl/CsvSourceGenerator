@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace FreeDoomBridge.SourceGenerators
+namespace PaleLotus.CsvSourceGenerator
 {
     public interface ICsvSerializable
     {

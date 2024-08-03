@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace FreeDoomBridge.SourceGenerators
+namespace PaleLotus.CsvSourceGenerator
 {
     [System.AttributeUsage(System.AttributeTargets.Class)]
     public class CsvSerializableAttribute : System.Attribute

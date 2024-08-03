@@ -1,12 +1,14 @@
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using static PaleLotus.CsvSourceGenerator.EmbeddedSources;
+
 
 namespace PaleLotus.CsvSourceGenerator;
 
 [Generator(LanguageNames.CSharp)]
-public sealed class CsvSourceGenerator : IIncrementalGenerator
+public class CsvSourceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -29,15 +31,17 @@ public sealed class CsvSourceGenerator : IIncrementalGenerator
         
         context.RegisterSourceOutput(typesToGenerate,
             static (spc, source) => Execute(source, spc));
+        
+
     }
     
-    private static void Execute(TypeToGenerate? typeToGenerate, SourceProductionContext context)
+    static void Execute(TypeToGenerate? typeToGenerate, SourceProductionContext context)
     {
         if (typeToGenerate is null) return;
         
-        context.AddSource($"{typeToGenerate.TypeName}.g.cs",
-            SourceText.From(typeToGenerate.Generate(), Encoding.UTF8));
+        context.AddSource($"{typeToGenerate.TypeName}.g.cs", SourceText.From(typeToGenerate.Generate(), Encoding.UTF8));
     }
+
 
     private static TypeToGenerate? GetTypeToGenerate(SemanticModel semanticModel, SyntaxNode typeDeclarationSyntax)
     {
@@ -50,22 +54,27 @@ public sealed class CsvSourceGenerator : IIncrementalGenerator
         var members = new List<string>(typeMembers.Length);
 
         foreach (var member in typeMembers)
-            if (member is IPropertySymbol)
+            if (member is IPropertySymbol property)
                 members.Add(member.Name);
         
+
         return new TypeToGenerate(name, members,GetAccessModifier(typeSymbol),
-            GetTypeKind(typeSymbol),GetNamespace(typeSymbol.ContainingNamespace));    
+            GetTypeKind(typeSymbol),GetNamespace((typeDeclarationSyntax as BaseTypeDeclarationSyntax)!));    
     }
     
       private static string GetTypeKind(INamedTypeSymbol symbol)
     {
+        //this must be on top
         if (symbol.IsRecord)
             return "record";
+        
         if (symbol.TypeKind == TypeKind.Class)
             return "class";
+
         return symbol.TypeKind == TypeKind.Struct ? "struct" : "unknown";
     }
-      
+
+
     private static string GetAccessModifier(INamedTypeSymbol symbol) =>
         symbol.DeclaredAccessibility switch
         {
@@ -78,13 +87,32 @@ public sealed class CsvSourceGenerator : IIncrementalGenerator
             _ => "unknown" // Handle other cases if needed
         };
 
-    private static string GetNamespace(INamespaceSymbol symbol) =>
-        symbol.ContainingNamespace is null
-            ? symbol.Name
-            : new StringBuilder()
-                .Append(GetNamespace(symbol.ContainingNamespace))
-                .Append(".")
-                .Append(symbol.Name)
-                .ToString()
-                .Trim('.');
+    private static string GetNamespace(BaseTypeDeclarationSyntax syntax)
+    {
+        var nameSpace = string.Empty;
+        
+        var potentialNamespaceParent = syntax.Parent;
+        
+        while (potentialNamespaceParent is not null &&
+               potentialNamespaceParent is not NamespaceDeclarationSyntax
+               && potentialNamespaceParent is not FileScopedNamespaceDeclarationSyntax)
+        {
+            potentialNamespaceParent = potentialNamespaceParent.Parent;
+        }
+
+        if (potentialNamespaceParent is not BaseNamespaceDeclarationSyntax namespaceParent)
+            return nameSpace;
+
+        nameSpace = namespaceParent.Name.ToString();
+        
+        while (true)
+        {
+            if (namespaceParent.Parent is not NamespaceDeclarationSyntax parent)
+                break;
+            nameSpace = $"{namespaceParent.Name}.{nameSpace}";
+            namespaceParent = parent;
+        }
+
+        return nameSpace;
+    }
 }
