@@ -7,7 +7,7 @@ using static PaleLotus.CsvSourceGenerator.EmbeddedResources;
 namespace PaleLotus.CsvSourceGenerator;
 
 [Generator(LanguageNames.CSharp)]
-public class CsvSourceGenerator : IIncrementalGenerator
+public class CsvGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -15,36 +15,36 @@ public class CsvSourceGenerator : IIncrementalGenerator
         context.RegisterPostInitializationOutput(ctx => 
         {
             ctx.AddSource(
-                $"{nameof(CsvSerializableAttribute)}.g.cs",
-                SourceText.From(CsvSerializableAttribute, Encoding.UTF8));
+                "CsvSerializableAttribute.g.cs",
+                SourceText.From(EmbeddedResources.CsvSerializableAttribute, Encoding.UTF8));
             
             ctx.AddSource(
-                $"{nameof(ICsvSerializable)}.g.cs",
-                SourceText.From(ICsvSerializable, Encoding.UTF8));
+                "ICsvSerializable.g.cs",
+                SourceText.From(EmbeddedResources.ICsvSerializable, Encoding.UTF8));
         });
 
-        // Only process type declarations (classes, structs, records)
         var typeDeclarations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                $"{typeof(CsvSourceGenerator).Assembly.GetName().Name}.{nameof(CsvSerializableAttribute)}",
+                "PaleLotus.CsvSourceGenerator.CsvSerializableAttribute",
                 predicate: static (node, _) => node is ClassDeclarationSyntax 
                     or StructDeclarationSyntax 
                     or RecordDeclarationSyntax,
                 transform: static (ctx, _) => TypeMetadata.FromSyntaxContext(ctx))
             .Where(static m => m is not null);
 
-        // Generate output
         context.RegisterSourceOutput(
             typeDeclarations,
             static (ctx, metadata) => ctx.AddSource(
                 $"{metadata!.TypeName}.g.cs",
                 SourceText.From(Generate(metadata), Encoding.UTF8)));
     }
-
     private static string Generate(TypeMetadata metadata)
     {
         var builder = new StringBuilder();
         builder.AppendLine(GetGeneratedHeader());
+        
+        builder.AppendLine("using PaleLotus.CsvSourceGenerator;");
+        builder.AppendLine();
 
         var hasNamespace = !string.IsNullOrEmpty(metadata.Namespace);
         if (hasNamespace)

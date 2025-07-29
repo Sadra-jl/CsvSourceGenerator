@@ -9,7 +9,7 @@
 
 namespace PaleLotus.CsvSourceGenerator
 {
-    [System.AttributeUsage(System.AttributeTargets.Class)]
+    [System.AttributeUsage(System.AttributeTargets.Class | AttributeTargets.Struct)]
     public class CsvSerializableAttribute : System.Attribute
     {
     }

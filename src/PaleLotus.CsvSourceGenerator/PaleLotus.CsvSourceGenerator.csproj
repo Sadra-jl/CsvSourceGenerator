@@ -1,53 +1,49 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <!-- make this project packable -->
         <IsPackable>true</IsPackable>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>PaleLotus.CsvSourceGenerator</RootNamespace>
 
-        <!-- package metadata -->
+        <PackageId>PaleLotus.CsvSourceGenerator</PackageId>
         <Version>1.0.0</Version>
         <Authors>Sadra-jl</Authors>
-        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <Description>High-performance CSV source generator for CSV serialization. Automatically generates ToCsv() and GetCsvHeader() methods.</Description>
         <PackageTags>csv;source-generator;roslyn</PackageTags>
         <RepositoryUrl>https://github.com/Sadra-jl/CsvSourceGenerator</RepositoryUrl>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <PackageProjectUrl>https://github.com/Sadra-jl/CsvSourceGenerator</PackageProjectUrl>
+        <PackageReleaseNotes>Initial release of CSV source generator</PackageReleaseNotes>
 
-        <IncludeBuildOutput>false</IncludeBuildOutput>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <Analyzer Include="$(OutputPath)\$(AssemblyName).dll"
-              Pack="true"
-              PackagePath="analyzers/dotnet/cs"
-              Visible="false" />
-        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-    </ItemGroup >
-
-    <PropertyGroup>
-        <TargetFramework>netstandard2.0</TargetFramework>
-        <IncludeBuildOutput>false</IncludeBuildOutput>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-
-        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <DevelopmentDependency>true</DevelopmentDependency>
         <IsRoslynComponent>true</IsRoslynComponent>
-        <RootNamespace>PaleLotus.CsvSourceGenerator</RootNamespace>
-        <PackageId>PaleLotus.CsvSourceGenerator</PackageId>
-        <LangVersion>latest</LangVersion>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <NoWarn>NU5128</NoWarn>
     </PropertyGroup>
-        
+
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.0"/>
+        <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 
     <ItemGroup>
         <None Remove="Templates\**\*.txt" />
         <EmbeddedResource Include="Templates\**\*.txt" />
     </ItemGroup>
- 
+
+    <ItemGroup>
+        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.0" />
+    </ItemGroup>
 </Project>
