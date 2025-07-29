@@ -2,8 +2,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using static PaleLotus.CsvSourceGenerator.EmbeddedSources;
-
+using static PaleLotus.CsvSourceGenerator.EmbeddedResources;
 
 namespace PaleLotus.CsvSourceGenerator;
 
@@ -12,107 +11,62 @@ public class CsvSourceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterPostInitializationOutput(incContext =>
+        // Register attribute and interface sources
+        context.RegisterPostInitializationOutput(ctx => 
         {
-            incContext.AddSource(
+            ctx.AddSource(
                 $"{nameof(CsvSerializableAttribute)}.g.cs",
                 SourceText.From(CsvSerializableAttribute, Encoding.UTF8));
             
-            incContext.AddSource($"{nameof(ICsvSerializableInterface)}.g.cs",
-                ICsvSerializableInterface);
+            ctx.AddSource(
+                $"{nameof(ICsvSerializable)}.g.cs",
+                SourceText.From(ICsvSerializable, Encoding.UTF8));
         });
 
-        var typesToGenerate = context.SyntaxProvider
-            .ForAttributeWithMetadataName($"FreeDoomBridge.SourceGenerators.{nameof(CsvSerializableAttribute)}",
-                predicate: static (_, _) => true,
-                transform: static (attContext, _) =>
-                    GetTypeToGenerate(attContext.SemanticModel, attContext.TargetNode))
-            .Where(static source => source is not null);
-        
-        context.RegisterSourceOutput(typesToGenerate,
-            static (spc, source) => Execute(source, spc));
-        
+        // Only process type declarations (classes, structs, records)
+        var typeDeclarations = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                $"{typeof(CsvSourceGenerator).Assembly.GetName().Name}.{nameof(CsvSerializableAttribute)}",
+                predicate: static (node, _) => node is ClassDeclarationSyntax 
+                    or StructDeclarationSyntax 
+                    or RecordDeclarationSyntax,
+                transform: static (ctx, _) => TypeMetadata.FromSyntaxContext(ctx))
+            .Where(static m => m is not null);
 
+        // Generate output
+        context.RegisterSourceOutput(
+            typeDeclarations,
+            static (ctx, metadata) => ctx.AddSource(
+                $"{metadata!.TypeName}.g.cs",
+                SourceText.From(Generate(metadata), Encoding.UTF8)));
     }
-    
-    static void Execute(TypeToGenerate? typeToGenerate, SourceProductionContext context)
+
+    private static string Generate(TypeMetadata metadata)
     {
-        if (typeToGenerate is null) return;
-        
-        context.AddSource($"{typeToGenerate.TypeName}.g.cs", SourceText.From(typeToGenerate.Generate(), Encoding.UTF8));
-    }
+        var builder = new StringBuilder();
+        builder.AppendLine(GetGeneratedHeader());
 
-
-    private static TypeToGenerate? GetTypeToGenerate(SemanticModel semanticModel, SyntaxNode typeDeclarationSyntax)
-    {
-        if (semanticModel.GetDeclaredSymbol(typeDeclarationSyntax) is not INamedTypeSymbol typeSymbol)
-            return null;
-
-        var name = typeSymbol.Name;
-
-        var typeMembers = typeSymbol.GetMembers();
-        var members = new List<string>(typeMembers.Length);
-
-        foreach (var member in typeMembers)
-            if (member is IPropertySymbol property)
-                members.Add(member.Name);
-        
-
-        return new TypeToGenerate(name, members,GetAccessModifier(typeSymbol),
-            GetTypeKind(typeSymbol),GetNamespace((typeDeclarationSyntax as BaseTypeDeclarationSyntax)!));    
-    }
-    
-      private static string GetTypeKind(INamedTypeSymbol symbol)
-    {
-        //this must be on top
-        if (symbol.IsRecord)
-            return "record";
-        
-        if (symbol.TypeKind == TypeKind.Class)
-            return "class";
-
-        return symbol.TypeKind == TypeKind.Struct ? "struct" : "unknown";
-    }
-
-
-    private static string GetAccessModifier(INamedTypeSymbol symbol) =>
-        symbol.DeclaredAccessibility switch
+        var hasNamespace = !string.IsNullOrEmpty(metadata.Namespace);
+        if (hasNamespace)
         {
-            Accessibility.Public => "public",
-            Accessibility.Internal => "internal",
-            Accessibility.Private => "private",
-            Accessibility.Protected => "protected",
-            Accessibility.ProtectedOrInternal => "protected internal",
-            Accessibility.ProtectedAndInternal => "private protected",
-            _ => "unknown" // Handle other cases if needed
-        };
-
-    private static string GetNamespace(BaseTypeDeclarationSyntax syntax)
-    {
-        var nameSpace = string.Empty;
-        
-        var potentialNamespaceParent = syntax.Parent;
-        
-        while (potentialNamespaceParent is not null &&
-               potentialNamespaceParent is not NamespaceDeclarationSyntax
-               && potentialNamespaceParent is not FileScopedNamespaceDeclarationSyntax)
-        {
-            potentialNamespaceParent = potentialNamespaceParent.Parent;
+            builder.AppendLine($"namespace {metadata.Namespace}");
+            builder.AppendLine("{");
         }
 
-        if (potentialNamespaceParent is not BaseNamespaceDeclarationSyntax namespaceParent)
-            return nameSpace;
-
-        nameSpace = namespaceParent.Name.ToString();
+        var indentation = hasNamespace ? "    " : "";
         
-        while (true)
-        {
-            if (namespaceParent.Parent is not NamespaceDeclarationSyntax parent)
-                break;
-            nameSpace = $"{namespaceParent.Name}.{nameSpace}";
-            namespaceParent = parent;
-        }
+        var properties = string.Join(",", metadata.Properties.Select(p => $"{{{p}}}"));
+        var headers = string.Join(",", metadata.Properties);
 
-        return nameSpace;
+        builder.AppendLine($"{indentation}{metadata.AccessModifier} partial {metadata.TypeKind} {metadata.TypeName} : ICsvSerializable");
+        builder.AppendLine($"{indentation}{{");
+        builder.AppendLine($"{indentation}    public string ToCsv() => $\"{properties}\";");
+        builder.AppendLine($"{indentation}    public string GetCsvHeader() => $\"{headers}\";");
+        builder.AppendLine($"{indentation}}}");
+
+        if (hasNamespace)
+            builder.AppendLine("}");
+
+        return builder.ToString();
     }
 }
