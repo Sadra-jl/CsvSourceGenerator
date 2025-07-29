@@ -1,4 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <!-- make this project packable -->
+        <IsPackable>true</IsPackable>
+
+        <!-- package metadata -->
+        <Version>1.0.0</Version>
+        <Authors>Sadra-jl</Authors>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <Description>High-performance CSV source generator for CSV serialization. Automatically generates ToCsv() and GetCsvHeader() methods.</Description>
+        <PackageTags>csv;source-generator;roslyn</PackageTags>
+        <RepositoryUrl>https://github.com/Sadra-jl/CsvSourceGenerator</RepositoryUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Analyzer Include="$(OutputPath)\$(AssemblyName).dll"
+              Pack="true"
+              PackagePath="analyzers/dotnet/cs"
+              Visible="false" />
+        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup >
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
@@ -26,8 +49,5 @@
         <None Remove="Templates\**\*.txt" />
         <EmbeddedResource Include="Templates\**\*.txt" />
     </ItemGroup>
-    <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true"
-              PackagePath="analyzers/dotnet/cs" Visible="false" />
-    </ItemGroup>
+ 
 </Project>
